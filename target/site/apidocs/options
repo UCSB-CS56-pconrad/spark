@@ -16,6 +16,8 @@
 'UTF-8'
 -doctitle
 'Spark 2.6-SNAPSHOT API'
+-link
+'http://docs.oracle.com/javase/8/docs/api'
 -linkoffline
 'http://docs.oracle.com/javase/8/docs/api' '/Users/pconrad/github/UCSB-CS56-pconrad/spark/target/javadoc-bundle-options'
 -use
