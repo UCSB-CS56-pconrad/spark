@@ -1,3 +1,5 @@
+[Javadoc](https://UCSB-CS56-pconrad.github.io/spark/target/site/apidocs/index.html)
+
 ![](https://img.shields.io/travis/perwendel/spark.svg) 
 ![](https://img.shields.io/github/license/perwendel/spark.svg)
 ![](https://img.shields.io/maven-central/v/com.sparkjava/spark-core.svg)
