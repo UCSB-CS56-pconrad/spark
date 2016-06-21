@@ -1,4 +1,5 @@
-target
+target/*
+!target/site
 bin
 .settings
 .externalToolBuilders
