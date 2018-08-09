@@ -2,15 +2,20 @@ package spark;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 import org.powermock.reflect.Whitebox;
 
+import spark.embeddedserver.EmbeddedServer;
+import spark.route.Routes;
 import spark.ssl.SslStores;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static spark.Service.ignite;
 
@@ -118,6 +123,36 @@ public class ServiceTest {
     }
 
     @Test
+    public void testGetPort_whenInitializedFalse_thenThrowIllegalStateException() {
+        thrown.expect(IllegalStateException.class);
+        thrown.expectMessage("This must be done after route mapping has begun");
+
+        Whitebox.setInternalState(service, "initialized", false);
+        service.port();
+    }
+
+    @Test
+    public void testGetPort_whenInitializedTrue() {
+        int expectedPort = 8080;
+        Whitebox.setInternalState(service, "initialized", true);
+        Whitebox.setInternalState(service, "port", expectedPort);
+
+        int actualPort = service.port();
+
+        assertEquals("Port retrieved should be the port setted", expectedPort, actualPort);
+    }
+
+    @Test
+    public void testGetPort_whenInitializedTrue_Default() {
+        int expectedPort = Service.SPARK_DEFAULT_PORT;
+        Whitebox.setInternalState(service, "initialized", true);
+
+        int actualPort = service.port();
+
+        assertEquals("Port retrieved should be the port setted", expectedPort, actualPort);
+    }
+
+    @Test
     public void testThreadPool_whenOnlyMaxThreads() {
         service.threadPool(100);
         int maxThreads = Whitebox.getInternalState(service, "maxThreads");
@@ -191,6 +226,58 @@ public class ServiceTest {
         thrown.expectMessage("This must be done before route mapping has begun");
 
         Whitebox.setInternalState(service, "initialized", true);
-        service.webSocket("/", Object.class);
+        service.webSocket("/", DummyWebSocketListener.class);
+    }
+    
+    @Test
+    public void testWebSocket_whenPathNull_thenThrowNullPointerException() {
+        thrown.expect(NullPointerException.class);
+        thrown.expectMessage("WebSocket path cannot be null");
+        service.webSocket(null, new DummyWebSocketListener());
+    }
+    
+    @Test
+    public void testWebSocket_whenHandlerNull_thenThrowNullPointerException() {
+        thrown.expect(NullPointerException.class);
+        thrown.expectMessage("WebSocket handler class cannot be null");
+        service.webSocket("/", null);
+    }
+    
+    @Test(timeout = 300)
+    public void stopExtinguishesServer() {
+        Service service = Service.ignite();
+        Routes routes = Mockito.mock(Routes.class);
+        EmbeddedServer server = Mockito.mock(EmbeddedServer.class);
+        service.routes = routes;
+        service.server = server;
+        service.initialized = true;
+        service.stop();
+        try {
+        	// yes, this is ugly and forces to set a test timeout as a precaution :(
+            while (service.initialized) {
+            	Thread.sleep(20);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        Mockito.verify(server).extinguish();
+    }
+    
+    @Test
+    public void awaitStopBlocksUntilExtinguished() {
+        Service service = Service.ignite();
+        Routes routes = Mockito.mock(Routes.class);
+        EmbeddedServer server = Mockito.mock(EmbeddedServer.class);
+        service.routes = routes;
+        service.server = server;
+        service.initialized = true;
+        service.stop();
+        service.awaitStop();
+        Mockito.verify(server).extinguish();
+        assertFalse(service.initialized);
+    }
+    
+    @WebSocket
+    protected static class DummyWebSocketListener {
     }
 }
